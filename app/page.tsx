@@ -201,10 +201,9 @@ export default function Home() {
                 </div>
                 <button
                   onClick={() => handleGenerate(formData)}
-                  disabled={state === 'loading'}
-                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white font-medium py-2 px-4 rounded-lg transition"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition"
                 >
-                  {state === 'loading' ? 'Regenerating...' : 'Regenerate Content'}
+                  Regenerate Content
                 </button>
               </div>
             </div>

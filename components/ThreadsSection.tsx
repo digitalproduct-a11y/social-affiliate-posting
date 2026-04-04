@@ -1,12 +1,12 @@
 'use client';
 
-import { ThreadsResult } from '@/lib/types';
+import { ThreadsResult, ThreadPost } from '@/lib/types';
 import { PostCard } from './PostCard';
 import { useState } from 'react';
 
 interface ThreadsSectionProps {
   data: ThreadsResult;
-  onPostsChange?: (posts: typeof data.posts) => void;
+  onPostsChange?: (posts: ThreadPost[]) => void;
   hideTitle?: boolean;
 }
 
