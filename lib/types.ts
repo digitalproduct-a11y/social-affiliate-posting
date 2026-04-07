@@ -4,6 +4,7 @@ export interface FormData {
   angle: string;
   targetAudience: string;
   tone: string;
+  brand: string;
 }
 
 export interface ThreadPost {
@@ -28,6 +29,7 @@ export interface GenerationResult {
   createdAt: string;
   productName: string;
   affiliateLink: string;
+  affiliateLinkGenerated: string;
   angle: string;
   targetAudience: string;
   tone: string;

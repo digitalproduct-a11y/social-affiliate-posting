@@ -20,6 +20,19 @@ const TONE_OPTIONS = [
   { value: 'friendly-recommendation', label: 'Friendly Recommendation' },
 ];
 
+const BRAND_OPTIONS = [
+  { value: 'stadiumastro', label: 'Stadium Astro' },
+  { value: 'astroarena', label: 'Astro Arena' },
+  { value: 'astroawani', label: 'Astro Awani' },
+  { value: 'astroulagam', label: 'Astro Ulagam' },
+  { value: 'sinar', label: 'Sinar' },
+  { value: 'era', label: 'Era' },
+  { value: 'hitz', label: 'Hitz' },
+  { value: 'mix', label: 'Mix' },
+  { value: 'raaga', label: 'Raaga' },
+  { value: 'meletop', label: 'Meletop' },
+];
+
 export function InputForm({
   onSubmit,
   isLoading,
@@ -31,10 +44,12 @@ export function InputForm({
     angle: initialData?.angle || '',
     targetAudience: initialData?.targetAudience || '',
     tone: initialData?.tone || '',
+    brand: initialData?.brand || 'stadiumastro',
   });
+  const [fetchingName, setFetchingName] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const isValid =
-    formData.productName.trim() &&
     formData.affiliateLink.trim() &&
     formData.angle.trim() &&
     formData.targetAudience.trim() &&
@@ -63,7 +78,49 @@ export function InputForm({
       angle: '',
       targetAudience: '',
       tone: '',
+      brand: 'kult',
     });
+  };
+
+  const handleFetchName = async () => {
+    if (!formData.affiliateLink.trim()) {
+      setFetchError('Please paste a product link first');
+      return;
+    }
+
+    setFetchingName(true);
+    setFetchError(null);
+
+    try {
+      const webhookUrl = 'https://astroproduct.app.n8n.cloud/webhook/extract-product-name-shopee';
+
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ affiliateLink: formData.affiliateLink }),
+        mode: 'cors',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch product name');
+      }
+
+      const data = await response.json();
+      const productName = data[0]?.productName || data.productName || '';
+
+      if (productName) {
+        setFormData({ ...formData, productName });
+        setFetchError(null);
+      } else {
+        setFetchError('Could not extract product name from link');
+      }
+    } catch (err) {
+      setFetchError(
+        err instanceof Error ? err.message : 'Failed to fetch product name'
+      );
+    } finally {
+      setFetchingName(false);
+    }
   };
 
   return (
@@ -72,22 +129,61 @@ export function InputForm({
       <p style={{ fontSize: '13px', color: '#6B7280', marginBottom: '24px' }}>Fill in the product details below — we'll generate content for Threads and Facebook.</p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <CustomInput
-          label="Product Name"
-          value={formData.productName}
-          onChange={(value) => setFormData({ ...formData, productName: value })}
-          placeholder="e.g., Xiaomi Smart Desk Fan 30cm"
-          type="text"
-        />
+        {/* Product Link + Fetch Button */}
+        <div className="md:col-span-2">
+          <div className="flex gap-2">
+            <div style={{ flex: 1 }}>
+              <CustomInput
+                label="Shopee Product Link"
+                value={formData.affiliateLink}
+                onChange={(value) => setFormData({ ...formData, affiliateLink: value })}
+                placeholder="https://shopee.com/..."
+                type="url"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={handleFetchName}
+              disabled={fetchingName || !formData.affiliateLink.trim()}
+              style={{
+                padding: '10px 16px',
+                borderRadius: '8px',
+                border: '1px solid #E5E7EB',
+                background: fetchingName || !formData.affiliateLink.trim() ? '#F3F4F6' : '#FFFFFF',
+                color: fetchingName || !formData.affiliateLink.trim() ? '#9CA3AF' : '#374151',
+                fontSize: '13px',
+                fontWeight: '600',
+                cursor: fetchingName || !formData.affiliateLink.trim() ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s ease',
+                alignSelf: 'flex-end',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {fetchingName ? 'Fetching...' : 'Fetch Name'}
+            </button>
+          </div>
+          {fetchError && (
+            <p style={{ fontSize: '12px', color: '#DC2626', marginTop: '4px' }}>
+              {fetchError}
+            </p>
+          )}
+        </div>
 
-        <CustomInput
-          label="Shopee Product Link"
-          value={formData.affiliateLink}
-          onChange={(value) => setFormData({ ...formData, affiliateLink: value })}
-          placeholder="https://shopee.com/..."
-          type="url"
-        />
+        {/* Product Name */}
+        <div className="md:col-span-2">
+          <CustomInput
+            label="Product Name"
+            value={formData.productName}
+            onChange={(value) => setFormData({ ...formData, productName: value })}
+            placeholder="e.g., Xiaomi Smart Desk Fan 30cm"
+            type="text"
+          />
+          <p style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>
+            (Auto-extracted or edit manually)
+          </p>
+        </div>
 
+        {/* Content Angle */}
         <CustomTextarea
           label="Content Angle"
           value={formData.angle}
@@ -96,6 +192,7 @@ export function InputForm({
           rows={2}
         />
 
+        {/* Target Audience */}
         <CustomTextarea
           label="Target Audience"
           value={formData.targetAudience}
@@ -104,15 +201,23 @@ export function InputForm({
           rows={2}
         />
 
-        <div className="md:col-span-2">
-          <CustomSelect
-            label="Tone"
-            value={formData.tone}
-            onChange={(value) => setFormData({ ...formData, tone: value })}
-            placeholder="Select Tone"
-            options={TONE_OPTIONS}
-          />
-        </div>
+        {/* Tone */}
+        <CustomSelect
+          label="Tone"
+          value={formData.tone}
+          onChange={(value) => setFormData({ ...formData, tone: value })}
+          placeholder="Select Tone"
+          options={TONE_OPTIONS}
+        />
+
+        {/* Brand */}
+        <CustomSelect
+          label="Brand"
+          value={formData.brand}
+          onChange={(value) => setFormData({ ...formData, brand: value })}
+          placeholder="Select Brand"
+          options={BRAND_OPTIONS}
+        />
       </div>
 
       <div className="flex gap-3 pt-8">

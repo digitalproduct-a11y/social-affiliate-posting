@@ -5,6 +5,7 @@ export const MOCK_RESULT: GenerationResult = {
   createdAt: new Date().toISOString(),
   productName: 'Xiaomi Smart Desk Fan 30cm',
   affiliateLink: 'https://shopee.com/product/xxx',
+  affiliateLinkGenerated: 'https://s.shopee.com.my/4pqAaWd3kT',
   angle: 'bilik panas dan ruang kecil',
   targetAudience: 'student dan orang bujang',
   tone: 'problem-solution',

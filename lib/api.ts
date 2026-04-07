@@ -1,5 +1,20 @@
 import { FormData, GenerationResult } from './types';
 
+export async function generateAffiliateLink(data: FormData): Promise<string> {
+  const response = await fetch('/api/affiliate-link', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      affiliateLink: data.affiliateLink,
+      brand: data.brand,
+      productName: data.productName,
+    }),
+  });
+
+  const result = await response.json();
+  return result.shortLink || '';
+}
+
 export async function generateContent(data: FormData): Promise<GenerationResult> {
   const webhookUrl = process.env.NEXT_PUBLIC_WEBHOOK_URL;
 
@@ -7,27 +22,32 @@ export async function generateContent(data: FormData): Promise<GenerationResult>
     throw new Error('NEXT_PUBLIC_WEBHOOK_URL not configured');
   }
 
-  const response = await fetch(webhookUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
+  try {
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Webhook error: ${response.status} - ${error}`);
-  }
-
-  let responseData: any = await response.json();
-
-  // n8n webhook returns array, unwrap it
-  if (Array.isArray(responseData)) {
-    if (responseData.length === 0) {
-      throw new Error('Empty response from webhook');
+    if (!response.ok) {
+      throw new Error(`Webhook error: ${response.status}`);
     }
-    responseData = responseData[0];
-  }
 
-  const result: GenerationResult = responseData;
-  return result;
+    let responseData: any = await response.json();
+
+    // n8n webhook returns array, unwrap it
+    if (Array.isArray(responseData)) {
+      if (responseData.length === 0) {
+        throw new Error('Empty response from webhook');
+      }
+      responseData = responseData[0];
+    }
+
+    return responseData;
+  } catch (err) {
+    if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
+      throw new Error('CORS error on localhost. This works in production. Try building: npm run build && npm run start');
+    }
+    throw err;
+  }
 }

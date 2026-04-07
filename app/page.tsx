@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { FormData, GenerationResult, AppState } from '@/lib/types';
-import { generateContent } from '@/lib/api';
+import { generateContent, generateAffiliateLink } from '@/lib/api';
 import { MOCK_RESULT } from '@/lib/mock';
 import { InputForm } from '@/components/InputForm';
 import { LoadingState } from '@/components/LoadingState';
@@ -28,11 +28,40 @@ export default function Home() {
       let result: GenerationResult;
 
       if (isMockMode) {
-        // Simulate network delay in mock mode
         await new Promise((resolve) => setTimeout(resolve, 2000));
         result = MOCK_RESULT;
       } else {
-        result = await generateContent(data);
+        const [contentResult, shortLinkResult] = await Promise.allSettled([
+          generateContent(data),
+          generateAffiliateLink(data),
+        ]);
+
+        if (contentResult.status === 'rejected') throw contentResult.reason;
+
+        result = contentResult.value;
+        if (shortLinkResult.status === 'fulfilled' && shortLinkResult.value) {
+          const shortLink = shortLinkResult.value;
+          result = { ...result, affiliateLinkGenerated: shortLink };
+
+          // Replace original link with affiliate shortlink in content
+          const originalLink = data.affiliateLink;
+          const escapedLink = originalLink.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const linkRegex = new RegExp(escapedLink, 'g');
+
+          if (result.threads?.posts) {
+            result.threads.posts = result.threads.posts.map((post) => ({
+              ...post,
+              content: post.content.replace(linkRegex, shortLink),
+            }));
+          }
+          if (result.facebook) {
+            result.facebook = {
+              ...result.facebook,
+              paragraphs: result.facebook.paragraphs.map((para) => para.replace(linkRegex, shortLink)),
+              fullText: result.facebook.fullText.replace(linkRegex, shortLink),
+            };
+          }
+        }
       }
 
       console.log('API Response:', result);
@@ -145,6 +174,50 @@ export default function Home() {
                 </div>
               </div>
             </div>
+
+            {/* Affiliate Link Section */}
+            {result.affiliateLinkGenerated && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-green-900 mb-3">
+                  Your Affiliate Link
+                </h3>
+                <div className="flex items-center gap-3">
+                  <input
+                    id="affiliate-link-input"
+                    type="text"
+                    value={result.affiliateLinkGenerated}
+                    readOnly
+                    className="flex-1 px-4 py-2 border border-green-300 rounded-lg bg-white text-green-900 font-mono text-sm"
+                  />
+                  <button
+                    onClick={(e) => {
+                      const btn = e.currentTarget as HTMLButtonElement;
+                      const input = document.getElementById('affiliate-link-input') as HTMLInputElement;
+                      const text = input?.value || result.affiliateLinkGenerated;
+                      const originalText = btn.textContent;
+                      const showCopied = () => {
+                        btn.textContent = '✓ Copied!';
+                        setTimeout(() => { btn.textContent = originalText; }, 2000);
+                      };
+                      if (navigator.clipboard) {
+                        navigator.clipboard.writeText(text).then(showCopied).catch(() => {
+                          input.select();
+                          document.execCommand('copy');
+                          showCopied();
+                        });
+                      } else {
+                        input.select();
+                        document.execCommand('copy');
+                        showCopied();
+                      }
+                    }}
+                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition whitespace-nowrap"
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Quick Regenerate Section */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
