@@ -35,6 +35,7 @@ export interface GenerationResult {
   tone: string;
   threads: ThreadsResult;
   facebook: FacebookResult;
+  thumbnailUrl?: string;
 }
 
 export type AppState = 'idle' | 'loading' | 'success' | 'error';

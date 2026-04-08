@@ -15,6 +15,20 @@ export async function generateAffiliateLink(data: FormData): Promise<string> {
   return result.shortLink || '';
 }
 
+export async function generateThumbnail(data: FormData): Promise<string> {
+  const response = await fetch('/api/thumbnail', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      brand: data.brand,
+      productName: data.productName,
+    }),
+  });
+
+  const result = await response.json();
+  return result.thumbnailUrl || '';
+}
+
 export async function generateContent(data: FormData): Promise<GenerationResult> {
   const webhookUrl = process.env.NEXT_PUBLIC_WEBHOOK_URL;
 

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { FormData, GenerationResult, AppState } from '@/lib/types';
-import { generateContent, generateAffiliateLink } from '@/lib/api';
+import { generateContent, generateAffiliateLink, generateThumbnail } from '@/lib/api';
 import { MOCK_RESULT } from '@/lib/mock';
 import { InputForm } from '@/components/InputForm';
 import { LoadingState } from '@/components/LoadingState';
@@ -31,9 +31,10 @@ export default function Home() {
         await new Promise((resolve) => setTimeout(resolve, 2000));
         result = MOCK_RESULT;
       } else {
-        const [contentResult, shortLinkResult] = await Promise.allSettled([
+        const [contentResult, shortLinkResult, thumbnailResult] = await Promise.allSettled([
           generateContent(data),
           generateAffiliateLink(data),
+          generateThumbnail(data),
         ]);
 
         if (contentResult.status === 'rejected') throw contentResult.reason;
@@ -61,6 +62,9 @@ export default function Home() {
               fullText: result.facebook.fullText.replace(linkRegex, shortLink),
             };
           }
+        }
+        if (thumbnailResult.status === 'fulfilled' && thumbnailResult.value) {
+          result = { ...result, thumbnailUrl: thumbnailResult.value };
         }
       }
 
@@ -216,6 +220,27 @@ export default function Home() {
                     Copy
                   </button>
                 </div>
+              </div>
+            )}
+
+            {/* AI Thumbnail Section */}
+            {result.thumbnailUrl && (
+              <div className="bg-white border border-gray-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  🎨 AI-Generated Thumbnail
+                </h3>
+                <img
+                  src={result.thumbnailUrl}
+                  alt={result.productName}
+                  className="w-full rounded-lg shadow-md mb-4"
+                />
+                <a
+                  href={result.thumbnailUrl}
+                  download={`${result.productName}-thumbnail.png`}
+                  className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition"
+                >
+                  ⬇ Download Thumbnail
+                </a>
               </div>
             )}
 
